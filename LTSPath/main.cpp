@@ -1,16 +1,16 @@
-#include <fstream>
-#include <filesystem>
-#include <windows.h>
+﻿#include <windows.h>
+#include "fileoperation.h"
+#include "logger.h"
+#include "stringmanip.h"
+#include "system.h"
 
 
-wchar_t* getPathBuffer();
-std::wofstream& mylog();
-std::wstring getCurrentProgramFullPath();
-std::wstring getCurrentProgramPath();
-std::wstring getProgramPath();
-std::wstring getShortPath(const std::wstring& strPath);
+bool createDirectories();
 
 namespace fs = std::filesystem;
+namespace fo = my::fileoperations;
+namespace sm = my::stringmanip;
+namespace sys = my::system;
 
 int APIENTRY wWinMain(
     _In_ HINSTANCE hInstance,
@@ -19,123 +19,62 @@ int APIENTRY wWinMain(
     _In_ int nShowCmd
 )
 {
-    std::wstring program = getProgramPath();
-    fs::path programPath(program);
+    Log::setDestination(sys::getCurrentProgramPath() + "ltspath\\logs.log");
+#ifdef _DEBUG
+    Log::setReportingLevel(LOG_DEBUG);
+#else
+    Log::setReportingLevel(LOG_INFO);
+#endif
+    Log::clear();
+
+    if (!createDirectories()) {
+        return EXIT_FAILURE;
+    }
+ 
+    if (!sys::getPrivileges()) { // not sure if still necessary
+        //return EXIT_FAILURE;
+    }
+
+    std::string program = sys::getProgramPath();
+    fs::path programPath = fs::u8path(program);
     if (!fs::is_regular_file(programPath)) {
-        mylog() << "Program missing or not specified! (create a file ltspath.txt with the path of the absolute path of the program)" << std::endl;
+        Log().Get(LOG_ERROR) << "Program missing or not specified! (create a file ltspath.txt with the path of the absolute path of the program)" << std::endl;
         return EXIT_FAILURE;
     }
 
-    std::wstring args;
+    // Change arguments paths to avoid unicode
+    std::string args;
     for (int i = 1; i < __argc; ++i) {
-        std::wstring arg = std::wstring(__wargv[i]);
-        fs::path path(arg);
-        if (!path.empty()) { // the arg is a path
-            std::wstring shortPath = getShortPath(arg);
-            if (!shortPath.empty()) {
-                arg = shortPath;
-
-                //mylog() << "Path=" << path.wstring() << std::endl;
-                //mylog() << "Short Path=" << path.wstring() << std::endl;
-            }
-        }
-        if (arg.find_first_of(L' ') == std::wstring::npos) {
-            arg = L"\"" + arg + L"\"";
-        }
+        std::string arg = sm::toString(std::wstring(__wargv[i]));
+        arg = sys::getPathWithoutUnicode(arg);
+        arg = "\"" + arg + "\"";
         args += arg;
     }
 
-    std::wstring commandLine = L"\"" + program + L"\" " + args;
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    if (!CreateProcessW(NULL,
-        &commandLine[0],
-        NULL,
-        NULL,
-        FALSE,
-        0,
-        NULL,
-        NULL,
-        &si,
-        &pi)
-        )
+    // Change current dir to avoid unicode as it can crash non unicode apps
+    std::string currentDirectory = sys::getCurrentDirectory();
+    if (!currentDirectory.empty())
     {
-        mylog() << "Could not launch the application " << program << " with arguments " << args << std::endl;
+        currentDirectory = sys::getPathWithoutUnicode(currentDirectory);
+        sys::setCurrentDirectory(currentDirectory);
+    }
+
+    std::string commandLine = "\"" + program + "\" " + args;
+    bool ok = sys::startProcess(commandLine);
+    if (!ok)
+    {
+        Log().Get(LOG_ERROR) << "Could not launch the application " << program << " with arguments " << args << std::endl;
         return EXIT_FAILURE;
     }
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
     return EXIT_SUCCESS;
 }
 
-wchar_t* getPathBuffer()
+bool createDirectories()
 {
-    static wchar_t pathBuffer[MAX_PATH];
-    return pathBuffer;
-}
-
-std::wofstream& mylog()
-{
-    static std::wofstream fLog(getCurrentProgramPath() + L"ltspath.log", std::ios::out | std::ios::trunc);
-    return fLog;
-}
-
-std::wstring getCurrentProgramFullPath()
-{
-    std::wstring strPath;
-
-    HMODULE hModule = GetModuleHandleW(NULL);
-    if (hModule != NULL)
-    {
-        GetModuleFileNameW(hModule, getPathBuffer(), MAX_PATH);
-        strPath = std::wstring(getPathBuffer());
+    fs::path path = fs::u8path(sys::getCurrentProgramPath() + "ltspath\\links"); // no trailing slash or error on creation of dir even if it works
+    bool ok = fo::createDirectories(path);
+    if (!ok) {
+        Log().Get(LOG_ERROR) << "Failed to create directory " << sys::toString(path) << std::endl;
     }
-    return strPath;
-}
-
-std::wstring getCurrentProgramPath()
-{
-    static std::wstring strPath;
-
-    if (strPath.empty())
-    {
-        fs::path path(getCurrentProgramFullPath());
-        path.remove_filename();
-        strPath = path.wstring();
-    }
-    return strPath;
-}
-
-std::wstring getProgramPath()
-{
-    std::wstring strPath;
-    std::wifstream fProgram(getCurrentProgramPath() + L"ltspath.txt", std::ios::in);
-    if (fProgram.is_open())
-    {
-        std::getline(fProgram, strPath);
-        fs::path path(strPath);
-        if (path.has_filename() && !path.has_parent_path()) {
-            strPath = getCurrentProgramPath() + strPath;
-        }
-    }
-    return strPath;
-}
-
-std::wstring getShortPath(const std::wstring& strPath)
-{
-    std::wstring strShortPath;
-    DWORD ret = GetShortPathNameW(strPath.c_str(), getPathBuffer(), MAX_PATH);
-    if (ret == 0) {
-        mylog() << "Could not get short name: error=" << GetLastError() << std::endl;
-    }
-    else {
-        strShortPath = std::wstring(getPathBuffer());
-    }
-    return getPathBuffer();
+    return ok;
 }
