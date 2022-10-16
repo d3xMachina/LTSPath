@@ -57,7 +57,7 @@ bool getPrivileges()
     HANDLE hToken;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
     {
-        Log().Get(LOG_ERROR) << "OpenProcessToken failed: error=" << GetLastError() << std::endl;
+        Log().Get(LOG_ERROR) << "OpenProcessToken failed: error=" << GetLastError();
         return false;
     }
 
@@ -70,7 +70,7 @@ bool getPrivileges()
         token_privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
         if (!AdjustTokenPrivileges(hToken, FALSE, &token_privileges, 0, NULL, NULL))
         {
-            Log().Get(LOG_ERROR) << "AdjustTokenPrivileges failed: error=" << GetLastError() << std::endl;
+            Log().Get(LOG_ERROR) << "AdjustTokenPrivileges failed: error=" << GetLastError();
             return false;
         }
     }
@@ -95,7 +95,7 @@ std::string getShortPath(const std::string& strPath)
         wStrShortPath.resize(size);
         size = GetShortPathNameW(wStrPath.c_str(), &wStrShortPath[0], (DWORD)wStrShortPath.size());
         if (size == 0) {
-            Log().Get(LOG_ERROR) << "Could not get short name: error=" << GetLastError() << std::endl;
+            Log().Get(LOG_ERROR) << "Could not get short name: error=" << GetLastError();
         }
     }
     return sm::toString(wStrShortPath);
@@ -146,7 +146,7 @@ std::string getSymbolicLink(const std::string& target)
     if (nbLinks >= maxSymbolicLinksSaved && !oldestPath.empty()) {
         bool ok = fs::remove(oldestPath);
         if (!ok) {
-            Log().Get(LOG_ERROR) << "Failed to remove symbolic link " << toString(oldestPath) << std::endl;
+            Log().Get(LOG_ERROR) << "Failed to remove symbolic link " << toString(oldestPath);
         }
         else {
             stems.erase(std::remove(stems.begin(), stems.end(), toString(oldestPath.stem())), stems.end());
@@ -175,7 +175,7 @@ std::string getSymbolicLink(const std::string& target)
         fs::create_directory_symlink(targetPath, destPath, errCode);
     }
     if (errCode) {
-        Log().Get(LOG_ERROR) << "Failed to create a symbolic link " << toString(destPath) << std::endl;
+        Log().Get(LOG_ERROR) << "Failed to create a symbolic link " << toString(destPath);
         return "";
     }
 
@@ -194,7 +194,7 @@ std::string getPathWithoutUnicode(std::string strPath)
         }
         if (newPath.empty()) {
             // nothing works, try to launch with unicode path anyway...
-            Log().Get(LOG_WARNING) << "Path could not be changed: " << toString(path) << std::endl;
+            Log().Get(LOG_WARNING) << "Path could not be changed: " << toString(path);
         }
         else {
             strPath = newPath;
@@ -202,7 +202,7 @@ std::string getPathWithoutUnicode(std::string strPath)
                 std::string currentDir = toString(fs::u8path(newPath).parent_path());
                 setCurrentDirectory(currentDir);
             }*/
-            Log().Get(LOG_INFO) << "Path changed: " << toString(path) << " --> " << newPath << std::endl;
+            Log().Get(LOG_INFO) << "Path changed: " << toString(path) << " --> " << newPath;
         }
     }
     return strPath;
@@ -216,7 +216,7 @@ std::string getCurrentDirectory()
         wStrPath.resize(size);
         size = GetCurrentDirectoryW((DWORD)wStrPath.size(), &wStrPath[0]);
         if (size == 0) {
-            Log().Get(LOG_ERROR) << "Could not get the current directory: error=" << GetLastError() << std::endl;
+            Log().Get(LOG_ERROR) << "Could not get the current directory: error=" << GetLastError();
         }
     }
     return sm::toString(wStrPath);
@@ -227,7 +227,7 @@ bool setCurrentDirectory(const std::string& path)
     std::wstring wPath = sm::toWString(path);
     BOOL ok = SetCurrentDirectoryW(wPath.c_str());
     if (!ok) {
-        Log().Get(LOG_ERROR) << "Could not set the current directory to " << path << ": error=" << GetLastError() << std::endl;
+        Log().Get(LOG_ERROR) << "Could not set the current directory to " << path << ": error=" << GetLastError();
     }
     return ok;
 }

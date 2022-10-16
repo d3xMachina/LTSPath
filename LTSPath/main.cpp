@@ -38,7 +38,7 @@ int APIENTRY wWinMain(
     std::string program = sys::getProgramPath();
     fs::path programPath = fs::u8path(program);
     if (!fs::is_regular_file(programPath)) {
-        Log().Get(LOG_ERROR) << "Program missing or not specified! (create a file ltspath.txt with the path of the absolute path of the program)" << std::endl;
+        Log().Get(LOG_ERROR) << "Program missing or not specified! (create a file ltspath.txt with the path of the absolute path of the program)";
         return EXIT_FAILURE;
     }
 
@@ -63,7 +63,7 @@ int APIENTRY wWinMain(
     bool ok = sys::startProcess(commandLine);
     if (!ok)
     {
-        Log().Get(LOG_ERROR) << "Could not launch the application " << program << " with arguments " << args << std::endl;
+        Log().Get(LOG_ERROR) << "Could not launch the application " << program << " with arguments " << args;
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
@@ -74,7 +74,7 @@ bool createDirectories()
     fs::path path = fs::u8path(sys::getCurrentProgramPath() + "ltspath\\links"); // no trailing slash or error on creation of dir even if it works
     bool ok = fo::createDirectories(path);
     if (!ok) {
-        Log().Get(LOG_ERROR) << "Failed to create directory " << sys::toString(path) << std::endl;
+        Log().Get(LOG_ERROR) << "Failed to create directory " << sys::toString(path);
     }
     return ok;
 }
