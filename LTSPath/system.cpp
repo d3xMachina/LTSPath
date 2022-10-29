@@ -79,11 +79,11 @@ bool getPrivileges()
 
 bool isPathUnicode(const std::string& path)
 {
-    // Might not be accurate
+    if (path.empty())
+        return false;
+
     std::wstring wPath = sm::toWString(path);
-    return std::any_of(wPath.begin(), wPath.end(), [](wchar_t c) {
-        return c > 127;
-    });
+    return sm::toString(wPath, CP_ACP).empty();
 }
 
 std::string getShortPath(const std::string& strPath)

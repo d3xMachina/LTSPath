@@ -16,15 +16,21 @@ std::wstring toWString(const std::string& str)
     return wstrTo;
 }
 
-std::string toString(const std::wstring& wstr)
+std::string toString(const std::wstring& wstr, unsigned int codePage)
 {
     std::string strTo;
-    int size = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (DWORD) wstr.size(), NULL, 0, NULL, NULL);
-    if (size > 0) {
+    BOOL badCharacter = FALSE;
+    int size = WideCharToMultiByte(codePage, WC_NO_BEST_FIT_CHARS, wstr.c_str(), (DWORD) wstr.size(), NULL, 0, NULL, &badCharacter);
+    if (!badCharacter && size > 0) {
         strTo.resize(size);
-        WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), (DWORD) wstr.size(), &strTo[0], size, NULL, NULL);
+        WideCharToMultiByte(codePage, WC_NO_BEST_FIT_CHARS, wstr.c_str(), (DWORD) wstr.size(), &strTo[0], size, NULL, NULL);
     }
     return strTo;
+}
+
+std::string toString(const std::wstring& wstr)
+{
+    return toString(wstr, CP_UTF8);
 }
 
 std::string toString(const std::u8string& u8Str)
