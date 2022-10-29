@@ -188,21 +188,33 @@ std::string getPathWithoutUnicode(std::string strPath)
     strPath = toString(path); // correct the formatting
 
     if (!path.empty() && isPathUnicode(strPath)) { // the arg is a path
-        std::string newPath = getSymbolicLink(strPath);
-        if (newPath.empty()) { // Try short path method if no rights to create symbolic links
-            newPath = getShortPath(strPath);
+        std::error_code errCode;
+        bool exist = fs::exists(path, errCode);
+        if (errCode) {
+            Log().Get(LOG_ERROR) << "Could not check if target path exist: " << toString(path) << " error=" << errCode << "." << std::endl
+                << " If the target is on a network drive, enable network drives over UAC in Windows to allow access to your network drives from an admin account." << std::endl
+                << " Otherwise ignore this warning.";
         }
-        if (newPath.empty()) {
-            // nothing works, try to launch with unicode path anyway...
-            Log().Get(LOG_WARNING) << "Path could not be changed: " << toString(path);
+        else if (!exist) {
+            Log().Get(LOG_WARNING) << "Path target does not exist: " << toString(path);
         }
-        else {
-            strPath = newPath;
-            /*if (i == 1 && fs::is_regular_file(newPath)) {
-                std::string currentDir = toString(fs::u8path(newPath).parent_path());
-                setCurrentDirectory(currentDir);
-            }*/
-            Log().Get(LOG_INFO) << "Path changed: " << toString(path) << " --> " << newPath;
+        else  {
+            std::string newPath = getSymbolicLink(strPath);
+            if (newPath.empty()) { // Try short path method if no rights to create symbolic links
+                newPath = getShortPath(strPath);
+            }
+            if (newPath.empty()) {
+                // nothing works, try to launch with unicode path anyway...
+                Log().Get(LOG_WARNING) << "Path could not be changed: " << toString(path);
+            }
+            else {
+                strPath = newPath;
+                /*if (i == 1 && fs::is_regular_file(newPath)) {
+                    std::string currentDir = toString(fs::u8path(newPath).parent_path());
+                    setCurrentDirectory(currentDir);
+                }*/
+                Log().Get(LOG_INFO) << "Path changed: " << toString(path) << " --> " << newPath;
+            }
         }
     }
     return strPath;
